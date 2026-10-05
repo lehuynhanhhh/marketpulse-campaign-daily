@@ -32,6 +32,8 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+# chỉ chứa TÊN biến, không giá trị — deploy_preflight.py đọc file này
+!.env.example
 
 # vercel
 .vercel

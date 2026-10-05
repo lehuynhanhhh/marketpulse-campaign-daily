@@ -3,6 +3,8 @@ import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import { fetchSheetValues, SHEET_TAB } from '@/lib/google-sheets';
 import { COLUMNS } from '@/lib/aggregate';
+import { qaFixtureOn } from '@/lib/qa-mode';
+import { readFixtureValues } from '@/lib/qa-fixture';
 import type { DataPayload, QualityCheck, Row } from '@/lib/types';
 
 /* Route Handler của Next 16 không cache mặc định ⇒ nút "Đồng bộ" đọc lại Sheet thật
@@ -52,11 +54,14 @@ export async function GET() {
 
   /* proxy.ts chỉ chắn trang /dashboard (redirect HTML) — route này tự kiểm session
      để trả JSON 401, vì client gọi bằng fetch() và không xử lý được redirect HTML. */
-  const session = await getServerSession(authOptions);
-  if (!session) return fail('Chưa đăng nhập.', fetchedAt, 401);
+  const qa = qaFixtureOn();   // chế độ dữ liệu mẫu của check_app.py — không bao giờ bật trên Vercel (lib/qa-mode.ts)
+  if (!qa) {
+    const session = await getServerSession(authOptions);
+    if (!session) return fail('Chưa đăng nhập.', fetchedAt, 401);
+  }
 
   try {
-    const values = await fetchSheetValues();
+    const values = qa ? await readFixtureValues() : await fetchSheetValues();
     const header = (values[0] ?? []).map((h) => h.trim());
     const wrong = COLUMNS.filter((c, i) => header[i] !== c);
     if (wrong.length) {
